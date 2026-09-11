@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Libris API
-  version: 0.1.0
+  version: 0.2.0
 paths:
   /api/v1/me:
     get:
@@ -13,6 +13,89 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CurrentReader"
+  /api/v1/isbn/{isbn}:
+    get:
+      summary: "What the public sources know about an ISBN; nothing is stored"
+      parameters:
+        - name: isbn
+          in: path
+          required: true
+          description: "The ISBN as typed: ten or thirteen digits, separators allowed"
+          schema:
+            type: string
+            nullable: false
+            minLength: 10
+            maxLength: 17
+          examples:
+            ONE_PIECE_1:
+              value: "9782723488525"
+            400_NOT_AN_ISBN:
+              value: "123"
+            404_UNKNOWN_ISBN:
+              value: "9782000000006"
+            503_SOURCES_DOWN:
+              value: "9791000000008"
+      responses:
+        "200":
+          description: The merged answer of the sources that replied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LookupResult"
+              examples:
+                ONE_PIECE_1:
+                  value:
+                    isbn13: "9782723488525"
+                    title: "Romance dawn"
+                    subtitle: "à l'aube d'une grande aventure"
+                    authors:
+                      - name: "Eiichirō Oda"
+                        role: WRITER
+                      - name: "Eiichirō Oda"
+                        role: ARTIST
+                    series:
+                      name: "One piece"
+                      volumeNumber: 1
+                    collection: "Shonen manga"
+                    publisher: "Glénat"
+                    publicationYear: 2013
+                    language: "fr"
+                    pageCount: 203
+                    summary: null
+                    coverUrl: "https://covers.openlibrary.org/b/isbn/9782723488525-L.jpg"
+                    sources: [BNF, OPEN_LIBRARY]
+        "400":
+          description: The text is not an ISBN
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ValidationProblem"
+        "404":
+          description: No source knows this ISBN
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                404_UNKNOWN_ISBN:
+                  value:
+                    type: "/problems/not-found"
+                    title: "Not found"
+                    status: 404
+                    detail: "Aucune source ne connaît cet ISBN."
+        "503":
+          description: No source answered
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                503_SOURCES_DOWN:
+                  value:
+                    type: "/problems/lookup-unavailable"
+                    title: "Lookup unavailable"
+                    status: 503
+                    detail: "Les sources ne répondent pas, réessayez plus tard."
 components:
   schemas:
     CurrentReader:
@@ -40,3 +123,138 @@ components:
           type: string
           nullable: false
           enum: [READER, ADMIN]
+    LookupResult:
+      type: object
+      additionalProperties: false
+      required: [isbn13, title, subtitle, authors, series, collection, publisher,
+                 publicationYear, language, pageCount, summary, coverUrl, sources]
+      properties:
+        isbn13:
+          type: string
+          nullable: false
+          pattern: "^97[89][0-9]{10}$"
+        title:
+          type: string
+          nullable: false
+          minLength: 1
+        subtitle:
+          type: string
+          nullable: true
+        authors:
+          type: array
+          nullable: false
+          items:
+            $ref: "#/components/schemas/LookupAuthor"
+        series:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/LookupSeries"
+        collection:
+          type: string
+          nullable: true
+        publisher:
+          type: string
+          nullable: true
+        publicationYear:
+          type: integer
+          nullable: true
+        language:
+          type: string
+          nullable: true
+          description: ISO 639-1 code
+          pattern: "^[a-z]{2}$"
+        pageCount:
+          type: integer
+          nullable: true
+          minimum: 1
+        summary:
+          type: string
+          nullable: true
+        coverUrl:
+          type: string
+          nullable: true
+        sources:
+          type: array
+          nullable: false
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            enum: [BNF, OPEN_LIBRARY]
+    LookupAuthor:
+      type: object
+      additionalProperties: false
+      required: [name, role]
+      properties:
+        name:
+          type: string
+          nullable: false
+          minLength: 1
+        role:
+          type: string
+          nullable: false
+          enum: [WRITER, ARTIST, COLOURIST, TRANSLATOR]
+    LookupSeries:
+      type: object
+      additionalProperties: false
+      required: [name, volumeNumber]
+      properties:
+        name:
+          type: string
+          nullable: false
+          minLength: 1
+        volumeNumber:
+          type: integer
+          nullable: true
+          minimum: 1
+    Problem:
+      type: object
+      required: [type, title, status, detail]
+      properties:
+        type:
+          type: string
+          nullable: false
+          description: A slug under /problems/ the client switches on
+        title:
+          type: string
+          nullable: false
+        status:
+          type: integer
+          nullable: false
+        detail:
+          type: string
+          nullable: false
+          description: In French; shown to the reader
+    ValidationProblem:
+      type: object
+      required: [type, title, status, detail, errors]
+      properties:
+        type:
+          type: string
+          nullable: false
+          enum: ["/problems/validation"]
+        title:
+          type: string
+          nullable: false
+        status:
+          type: integer
+          nullable: false
+          enum: [400]
+        detail:
+          type: string
+          nullable: false
+        errors:
+          type: array
+          nullable: false
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [field, message]
+            properties:
+              field:
+                type: string
+                nullable: false
+              message:
+                type: string
+                nullable: false
