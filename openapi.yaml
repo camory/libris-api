@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Libris API
-  version: 0.2.0
+  version: 0.3.0
 paths:
   /api/v1/me:
     get:
@@ -20,17 +20,16 @@ paths:
         - name: isbn
           in: path
           required: true
-          description: "The ISBN as typed: ten or thirteen digits, separators allowed"
+          description: The ISBN-13 as thirteen digits
           schema:
             type: string
             nullable: false
-            minLength: 10
-            maxLength: 17
+            pattern: "^97[89][0-9]{10}$"
           examples:
             ONE_PIECE_1:
               value: "9782723488525"
             400_NOT_AN_ISBN:
-              value: "123"
+              value: "9782723488526"
             404_UNKNOWN_ISBN:
               value: "9782000000006"
             503_SOURCES_DOWN:
@@ -41,7 +40,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LookupResult"
+                $ref: "#/components/schemas/Isbn"
               examples:
                 ONE_PIECE_1:
                   value:
@@ -70,6 +69,15 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ValidationProblem"
+              examples:
+                400_NOT_AN_ISBN:
+                  value:
+                    type: "/problems/validation"
+                    title: "Bad Request"
+                    status: 400
+                    errors:
+                      - field: "isbn"
+                        code: "not-an-isbn"
         "404":
           description: No source knows this ISBN
           content:
@@ -80,11 +88,10 @@ paths:
                 404_UNKNOWN_ISBN:
                   value:
                     type: "/problems/not-found"
-                    title: "Not found"
+                    title: "Not Found"
                     status: 404
-                    detail: "Aucune source ne connaît cet ISBN."
         "503":
-          description: No source answered
+          description: No source answered; a 5xx without this body means Libris itself is unavailable
           content:
             application/problem+json:
               schema:
@@ -92,10 +99,9 @@ paths:
               examples:
                 503_SOURCES_DOWN:
                   value:
-                    type: "/problems/lookup-unavailable"
-                    title: "Lookup unavailable"
+                    type: "/problems/sources-unavailable"
+                    title: "Service Unavailable"
                     status: 503
-                    detail: "Les sources ne répondent pas, réessayez plus tard."
 components:
   schemas:
     CurrentReader:
@@ -123,7 +129,7 @@ components:
           type: string
           nullable: false
           enum: [READER, ADMIN]
-    LookupResult:
+    Isbn:
       type: object
       additionalProperties: false
       required: [isbn13, title, subtitle, authors, series, collection, publisher,
@@ -144,11 +150,11 @@ components:
           type: array
           nullable: false
           items:
-            $ref: "#/components/schemas/LookupAuthor"
+            $ref: "#/components/schemas/IsbnAuthor"
         series:
           nullable: true
           allOf:
-            - $ref: "#/components/schemas/LookupSeries"
+            - $ref: "#/components/schemas/IsbnSeries"
         collection:
           type: string
           nullable: true
@@ -158,6 +164,7 @@ components:
         publicationYear:
           type: integer
           nullable: true
+          minimum: 1
         language:
           type: string
           nullable: true
@@ -181,7 +188,7 @@ components:
           items:
             type: string
             enum: [BNF, OPEN_LIBRARY]
-    LookupAuthor:
+    IsbnAuthor:
       type: object
       additionalProperties: false
       required: [name, role]
@@ -194,7 +201,7 @@ components:
           type: string
           nullable: false
           enum: [WRITER, ARTIST, COLOURIST, TRANSLATOR]
-    LookupSeries:
+    IsbnSeries:
       type: object
       additionalProperties: false
       required: [name, volumeNumber]
@@ -209,7 +216,7 @@ components:
           minimum: 1
     Problem:
       type: object
-      required: [type, title, status, detail]
+      required: [type, title, status]
       properties:
         type:
           type: string
@@ -221,13 +228,9 @@ components:
         status:
           type: integer
           nullable: false
-        detail:
-          type: string
-          nullable: false
-          description: In French; shown to the reader
     ValidationProblem:
       type: object
-      required: [type, title, status, detail, errors]
+      required: [type, title, status, errors]
       properties:
         type:
           type: string
@@ -240,9 +243,6 @@ components:
           type: integer
           nullable: false
           enum: [400]
-        detail:
-          type: string
-          nullable: false
         errors:
           type: array
           nullable: false
@@ -250,11 +250,11 @@ components:
           items:
             type: object
             additionalProperties: false
-            required: [field, message]
+            required: [field, code]
             properties:
               field:
                 type: string
                 nullable: false
-              message:
+              code:
                 type: string
                 nullable: false
