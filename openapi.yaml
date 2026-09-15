@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Libris API
-  version: 0.3.0
+  version: 0.4.0
 paths:
   /api/v1/me:
     get:
@@ -62,7 +62,6 @@ paths:
                     pageCount: 203
                     summary: null
                     coverUrl: "https://covers.openlibrary.org/b/isbn/9782723488525-L.jpg"
-                    sources: [BNF, OPEN_LIBRARY]
         "400":
           description: The text is not an ISBN
           content:
@@ -133,7 +132,7 @@ components:
       type: object
       additionalProperties: false
       required: [isbn13, title, subtitle, authors, series, collection, publisher,
-                 publicationYear, language, pageCount, summary, coverUrl, sources]
+                 publicationYear, language, pageCount, summary, coverUrl]
       properties:
         isbn13:
           type: string
@@ -180,14 +179,6 @@ components:
         coverUrl:
           type: string
           nullable: true
-        sources:
-          type: array
-          nullable: false
-          minItems: 1
-          uniqueItems: true
-          items:
-            type: string
-            enum: [BNF, OPEN_LIBRARY]
     IsbnAuthor:
       type: object
       additionalProperties: false

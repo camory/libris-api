@@ -8,3 +8,6 @@
 
 ## v0.3.0
 - `GET /api/v1/isbn/{isbn}` takes the ISBN-13 as thirteen digits; schemas `Isbn`, `IsbnAuthor`, `IsbnSeries`; problems carry no `detail`, validation errors carry `{field, code}`; a problem body marks an answer from Libris itself. Supersedes v0.2.0, which nothing pins.
+
+## v0.4.0
+- `Isbn` no longer carries `sources`: the answer says what is known, not who knew it.
