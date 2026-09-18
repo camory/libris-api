@@ -1,21 +1,21 @@
 openapi: 3.0.3
 info:
   title: Libris API
-  version: 0.5.0
+  version: 0.6.0
 paths:
   /api/v1/me:
     get:
-      summary: "The reader making the request: their profile and role"
+      summary: "The reader making the request: their profile, role and default bookshelf"
       responses:
         "200":
-          description: The reader's identity and role
+          description: The reader's identity, role and default bookshelf
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CurrentReader"
   /api/v1/isbn/{isbn}:
     get:
-      summary: "What the public sources know about an ISBN; nothing is stored"
+      summary: "What is known about an ISBN: the house's book with its copies on the reader's bookshelves, or what the public sources say"
       parameters:
         - name: isbn
           in: path
@@ -28,6 +28,8 @@ paths:
           examples:
             ONE_PIECE_1:
               value: "9782723488525"
+            ONE_PIECE_2_OWNED:
+              value: "9782723489898"
             400_NOT_AN_ISBN:
               value: "9782723488526"
             404_UNKNOWN_ISBN:
@@ -36,33 +38,16 @@ paths:
               value: "9791000000008"
       responses:
         "200":
-          description: The merged answer of the sources that replied
+          description: The book, with its copies on the reader's bookshelves
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/IsbnLookup"
               examples:
                 ONE_PIECE_1:
-                  value:
-                    isbn13: "9782723488525"
-                    kind: MANGA
-                    title: "Romance dawn"
-                    subtitle: "à l'aube d'une grande aventure"
-                    authors:
-                      - name: "Eiichirō Oda"
-                        role: WRITER
-                      - name: "Eiichirō Oda"
-                        role: ARTIST
-                    series:
-                      name: "One piece"
-                      volumeNumber: 1
-                    collection: "Shonen manga"
-                    publisher: "Glénat"
-                    publicationYear: 2013
-                    language: "fr"
-                    pageCount: 203
-                    summary: null
-                    coverUrl: "https://covers.openlibrary.org/b/isbn/9782723488525-L.jpg"
+                  $ref: "#/components/examples/OnePiece1"
+                ONE_PIECE_2_OWNED:
+                  $ref: "#/components/examples/OnePiece2Owned"
         "400":
           description: The text is not an ISBN
           content:
@@ -71,25 +56,16 @@ paths:
                 $ref: "#/components/schemas/Problem"
               examples:
                 400_NOT_AN_ISBN:
-                  value:
-                    type: "/problems/validation"
-                    title: "Bad Request"
-                    status: 400
-                    errors:
-                      - field: "isbn"
-                        code: "not-an-isbn"
+                  $ref: "#/components/examples/NotAnIsbn"
         "404":
-          description: No source knows this ISBN
+          description: Neither the house nor a source knows this ISBN
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
               examples:
                 404_UNKNOWN_ISBN:
-                  value:
-                    type: "/problems/not-found"
-                    title: "Not Found"
-                    status: 404
+                  $ref: "#/components/examples/UnknownIsbn"
         "503":
           description: No source answered; a 5xx without this body means Libris itself is unavailable
           content:
@@ -98,16 +74,74 @@ paths:
                 $ref: "#/components/schemas/Problem"
               examples:
                 503_SOURCES_DOWN:
-                  value:
-                    type: "/problems/sources-unavailable"
-                    title: "Service Unavailable"
-                    status: 503
+                  $ref: "#/components/examples/SourcesDown"
+  /api/v1/bookshelves/{id}/books:
+    post:
+      summary: "A copy of this book on this bookshelf; the book is created when its ISBN is unknown"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The bookshelf's id
+          schema:
+            type: string
+            format: uuid
+            nullable: false
+          examples:
+            ADD_ONE_PIECE_1:
+              value: "0b1e2d3c-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
+            400_NOT_AN_ISBN:
+              value: "0b1e2d3c-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
+            404_NOT_MY_BOOKSHELF:
+              value: "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b"
+      requestBody:
+        required: true
+        description: The book as the reader submits it
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewBook"
+            examples:
+              ADD_ONE_PIECE_1:
+                $ref: "#/components/examples/NewOnePiece1"
+              400_NOT_AN_ISBN:
+                $ref: "#/components/examples/NewOnePiece1WrongDigit"
+              404_NOT_MY_BOOKSHELF:
+                $ref: "#/components/examples/NewOnePiece1"
+      responses:
+        "201":
+          description: The copy now on the bookshelf
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Copy"
+              examples:
+                ADD_ONE_PIECE_1:
+                  $ref: "#/components/examples/CopyOfOnePiece1"
+        "400":
+          description: A field is refused
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                400_NOT_AN_ISBN:
+                  $ref: "#/components/examples/NotAnIsbn13"
+        "404":
+          description: The reader owns no such bookshelf
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                404_NOT_MY_BOOKSHELF:
+                  $ref: "#/components/examples/NotMyBookshelf"
 components:
   schemas:
     CurrentReader:
       type: object
       additionalProperties: false
-      required: [id, username, displayName, email, role]
+      required: [id, username, displayName, email, role, defaultBookshelf]
       properties:
         id:
           type: string
@@ -129,7 +163,72 @@ components:
           type: string
           nullable: false
           enum: [READER, ADMIN]
+        defaultBookshelf:
+          nullable: false
+          allOf:
+            - $ref: "#/components/schemas/Bookshelf"
     IsbnLookup:
+      type: object
+      additionalProperties: false
+      required: [isbn13, kind, title, subtitle, authors, series, collection, publisher,
+                 publicationYear, language, pageCount, summary, coverUrl, copies]
+      properties:
+        isbn13:
+          type: string
+          nullable: false
+          pattern: "^97[89][0-9]{10}$"
+        kind:
+          type: string
+          nullable: false
+          enum: [BOOK, BD, MANGA]
+        title:
+          type: string
+          nullable: false
+          minLength: 1
+        subtitle:
+          type: string
+          nullable: true
+        authors:
+          type: array
+          nullable: false
+          items:
+            $ref: "#/components/schemas/Author"
+        series:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Series"
+        collection:
+          type: string
+          nullable: true
+        publisher:
+          type: string
+          nullable: true
+        publicationYear:
+          type: integer
+          nullable: true
+          minimum: 1
+        language:
+          type: string
+          nullable: true
+          description: ISO 639-1 code
+          pattern: "^[a-z]{2}$"
+        pageCount:
+          type: integer
+          nullable: true
+          minimum: 1
+        summary:
+          type: string
+          nullable: true
+        coverUrl:
+          type: string
+          nullable: true
+        copies:
+          type: array
+          nullable: false
+          description: The copies on the bookshelves the reader belongs to
+          items:
+            $ref: "#/components/schemas/Copy"
+    NewBook:
       type: object
       additionalProperties: false
       required: [isbn13, kind, title, subtitle, authors, series, collection, publisher,
@@ -137,7 +236,7 @@ components:
       properties:
         isbn13:
           type: string
-          nullable: false
+          nullable: true
           pattern: "^97[89][0-9]{10}$"
         kind:
           type: string
@@ -210,6 +309,32 @@ components:
           type: integer
           nullable: true
           minimum: 1
+    Copy:
+      type: object
+      additionalProperties: false
+      required: [id, bookshelf]
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: false
+        bookshelf:
+          nullable: false
+          allOf:
+            - $ref: "#/components/schemas/Bookshelf"
+    Bookshelf:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: false
+        name:
+          type: string
+          nullable: false
+          minLength: 1
     Problem:
       type: object
       required: [type, title, status]
@@ -240,3 +365,135 @@ components:
               code:
                 type: string
                 nullable: false
+  examples:
+    OnePiece1:
+      value:
+        isbn13: "9782723488525"
+        kind: MANGA
+        title: "Romance dawn"
+        subtitle: "à l'aube d'une grande aventure"
+        authors:
+          - name: "Eiichirō Oda"
+            role: WRITER
+          - name: "Eiichirō Oda"
+            role: ARTIST
+        series:
+          name: "One piece"
+          volumeNumber: 1
+        collection: "Shonen manga"
+        publisher: "Glénat"
+        publicationYear: 2013
+        language: "fr"
+        pageCount: 203
+        summary: null
+        coverUrl: "https://covers.openlibrary.org/b/isbn/9782723488525-L.jpg"
+        copies: []
+    OnePiece2Owned:
+      value:
+        isbn13: "9782723489898"
+        kind: MANGA
+        title: "Aux prises avec Baggy et ses hommes"
+        subtitle: null
+        authors:
+          - name: "Eiichirō Oda"
+            role: WRITER
+          - name: "Eiichirō Oda"
+            role: ARTIST
+        series:
+          name: "One piece"
+          volumeNumber: 2
+        collection: "Shonen manga"
+        publisher: "Glénat"
+        publicationYear: 2013
+        language: "fr"
+        pageCount: 208
+        summary: null
+        coverUrl: "https://covers.openlibrary.org/b/isbn/9782723489898-L.jpg"
+        copies:
+          - id: "6f1d2c3b-4a59-4e6f-8b70-1c2d3e4f5a61"
+            bookshelf:
+              id: "0b1e2d3c-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
+              name: "Bibliothèque de Léa"
+          - id: "7a2e3d4c-5b6a-4f70-9c81-2d3e4f5a6b72"
+            bookshelf:
+              id: "1c2f3e4d-5a6b-4c7d-9e8f-0a1b2c3d4e5f"
+              name: "Salon"
+    NewOnePiece1:
+      value:
+        isbn13: "9782723488525"
+        kind: MANGA
+        title: "Romance dawn"
+        subtitle: "à l'aube d'une grande aventure"
+        authors:
+          - name: "Eiichirō Oda"
+            role: WRITER
+          - name: "Eiichirō Oda"
+            role: ARTIST
+        series:
+          name: "One piece"
+          volumeNumber: 1
+        collection: "Shonen manga"
+        publisher: "Glénat"
+        publicationYear: 2013
+        language: "fr"
+        pageCount: 203
+        summary: null
+        coverUrl: "https://covers.openlibrary.org/b/isbn/9782723488525-L.jpg"
+    NewOnePiece1WrongDigit:
+      value:
+        isbn13: "9782723488526"
+        kind: MANGA
+        title: "Romance dawn"
+        subtitle: "à l'aube d'une grande aventure"
+        authors:
+          - name: "Eiichirō Oda"
+            role: WRITER
+          - name: "Eiichirō Oda"
+            role: ARTIST
+        series:
+          name: "One piece"
+          volumeNumber: 1
+        collection: "Shonen manga"
+        publisher: "Glénat"
+        publicationYear: 2013
+        language: "fr"
+        pageCount: 203
+        summary: null
+        coverUrl: "https://covers.openlibrary.org/b/isbn/9782723488525-L.jpg"
+    CopyOfOnePiece1:
+      value:
+        id: "5e0c1b2a-3948-4d5e-8a6f-0b1c2d3e4f50"
+        bookshelf:
+          id: "0b1e2d3c-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
+          name: "Bibliothèque de Léa"
+    NotAnIsbn:
+      value:
+        type: "/problems/validation"
+        title: "Bad Request"
+        status: 400
+        errors:
+          - field: "isbn"
+            code: "not-an-isbn"
+    NotAnIsbn13:
+      value:
+        type: "/problems/validation"
+        title: "Bad Request"
+        status: 400
+        errors:
+          - field: "isbn13"
+            code: "not-an-isbn"
+    UnknownIsbn:
+      value:
+        type: "/problems/not-found"
+        title: "Not Found"
+        status: 404
+    SourcesDown:
+      value:
+        type: "/problems/sources-unavailable"
+        title: "Service Unavailable"
+        status: 503
+    NotMyBookshelf:
+      value:
+        type: "/problems/not-found"
+        title: "Not Found"
+        status: 404

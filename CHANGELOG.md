@@ -14,3 +14,6 @@
 
 ## v0.5.0
 - `Isbn` becomes `IsbnLookup` and carries `kind` (`BOOK`, `BD`, `MANGA`); `IsbnAuthor` and `IsbnSeries` become `Author` and `Series`; `ValidationProblem` folds into `Problem`, whose `errors` is optional. No byte of an answer changes but the new field.
+
+## v0.6.0
+- `POST /api/v1/bookshelves/{id}/books`: a copy of the book on the bookshelf, the body a `NewBook`, the book as the reader submits it, with or without an ISBN; `IsbnLookup` carries `copies`, the copies on the reader's bookshelves; `CurrentReader` carries `defaultBookshelf`; schemas `Copy` and `Bookshelf`; the body examples live under `components/examples`.
