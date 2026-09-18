@@ -11,3 +11,6 @@
 
 ## v0.4.0
 - `Isbn` no longer carries `sources`: the answer says what is known, not who knew it.
+
+## v0.5.0
+- `Isbn` becomes `IsbnLookup` and carries `kind` (`BOOK`, `BD`, `MANGA`); `IsbnAuthor` and `IsbnSeries` become `Author` and `Series`; `ValidationProblem` folds into `Problem`, whose `errors` is optional. No byte of an answer changes but the new field.

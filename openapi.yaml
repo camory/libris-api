@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Libris API
-  version: 0.4.0
+  version: 0.5.0
 paths:
   /api/v1/me:
     get:
@@ -40,11 +40,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Isbn"
+                $ref: "#/components/schemas/IsbnLookup"
               examples:
                 ONE_PIECE_1:
                   value:
                     isbn13: "9782723488525"
+                    kind: MANGA
                     title: "Romance dawn"
                     subtitle: "à l'aube d'une grande aventure"
                     authors:
@@ -67,7 +68,7 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: "#/components/schemas/ValidationProblem"
+                $ref: "#/components/schemas/Problem"
               examples:
                 400_NOT_AN_ISBN:
                   value:
@@ -128,16 +129,20 @@ components:
           type: string
           nullable: false
           enum: [READER, ADMIN]
-    Isbn:
+    IsbnLookup:
       type: object
       additionalProperties: false
-      required: [isbn13, title, subtitle, authors, series, collection, publisher,
+      required: [isbn13, kind, title, subtitle, authors, series, collection, publisher,
                  publicationYear, language, pageCount, summary, coverUrl]
       properties:
         isbn13:
           type: string
           nullable: false
           pattern: "^97[89][0-9]{10}$"
+        kind:
+          type: string
+          nullable: false
+          enum: [BOOK, BD, MANGA]
         title:
           type: string
           nullable: false
@@ -149,11 +154,11 @@ components:
           type: array
           nullable: false
           items:
-            $ref: "#/components/schemas/IsbnAuthor"
+            $ref: "#/components/schemas/Author"
         series:
           nullable: true
           allOf:
-            - $ref: "#/components/schemas/IsbnSeries"
+            - $ref: "#/components/schemas/Series"
         collection:
           type: string
           nullable: true
@@ -179,7 +184,7 @@ components:
         coverUrl:
           type: string
           nullable: true
-    IsbnAuthor:
+    Author:
       type: object
       additionalProperties: false
       required: [name, role]
@@ -192,7 +197,7 @@ components:
           type: string
           nullable: false
           enum: [WRITER, ARTIST, COLOURIST, TRANSLATOR]
-    IsbnSeries:
+    Series:
       type: object
       additionalProperties: false
       required: [name, volumeNumber]
@@ -219,25 +224,11 @@ components:
         status:
           type: integer
           nullable: false
-    ValidationProblem:
-      type: object
-      required: [type, title, status, errors]
-      properties:
-        type:
-          type: string
-          nullable: false
-          enum: ["/problems/validation"]
-        title:
-          type: string
-          nullable: false
-        status:
-          type: integer
-          nullable: false
-          enum: [400]
         errors:
           type: array
           nullable: false
           minItems: 1
+          description: One entry per refused request field, on a validation problem only
           items:
             type: object
             additionalProperties: false
