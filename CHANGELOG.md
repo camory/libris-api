@@ -20,3 +20,6 @@
 
 ## v0.6.1
 - `POST /api/v1/bookshelves/{id}/books`: `id` is typed as a string with a uuid pattern instead of `format: uuid`, until Contracteer 4.1.0. No byte of a request or an answer changes.
+
+## v0.6.2
+- `NewBook.title`, `Author.name` and `Series.name` refuse a blank value with a `pattern` beside their `minLength: 1`. No byte of a request or an answer changes.

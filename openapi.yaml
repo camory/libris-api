@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Libris API
-  version: 0.6.1
+  version: 0.6.2
 paths:
   /api/v1/me:
     get:
@@ -248,6 +248,7 @@ components:
           type: string
           nullable: false
           minLength: 1
+          pattern: "\\S"
         subtitle:
           type: string
           nullable: true
@@ -294,6 +295,7 @@ components:
           type: string
           nullable: false
           minLength: 1
+          pattern: "\\S"
         role:
           type: string
           nullable: false
@@ -307,6 +309,7 @@ components:
           type: string
           nullable: false
           minLength: 1
+          pattern: "\\S"
         volumeNumber:
           type: integer
           nullable: true
