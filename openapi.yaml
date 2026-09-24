@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Libris API
-  version: 0.6.0
+  version: 0.6.1
 paths:
   /api/v1/me:
     get:
@@ -85,7 +85,9 @@ paths:
           description: The bookshelf's id
           schema:
             type: string
-            format: uuid
+            # Temporary: `pattern` stands in for `format: uuid` until Contracteer 4.1.0,
+            # whose 4.0.0 verifier sends a path value with an encoded slash for the uuid case.
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
             nullable: false
           examples:
             ADD_ONE_PIECE_1:

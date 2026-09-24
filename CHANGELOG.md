@@ -17,3 +17,6 @@
 
 ## v0.6.0
 - `POST /api/v1/bookshelves/{id}/books`: a copy of the book on the bookshelf, the body a `NewBook`, the book as the reader submits it, with or without an ISBN; `IsbnLookup` carries `copies`, the copies on the reader's bookshelves; `CurrentReader` carries `defaultBookshelf`; schemas `Copy` and `Bookshelf`; the body examples live under `components/examples`.
+
+## v0.6.1
+- `POST /api/v1/bookshelves/{id}/books`: `id` is typed as a string with a uuid pattern instead of `format: uuid`, until Contracteer 4.1.0. No byte of a request or an answer changes.
