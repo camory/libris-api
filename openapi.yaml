@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Libris API
-  version: 0.6.2
+  version: 0.7.0
 paths:
   /api/v1/me:
     get:
@@ -75,6 +75,31 @@ paths:
               examples:
                 503_SOURCES_DOWN:
                   $ref: "#/components/examples/SourcesDown"
+  /api/v1/books:
+    get:
+      summary: "The reader's catalogue: the house's books with a copy on a bookshelf they belong to, fifty at a time, as a shelf reads"
+      parameters:
+        - name: after
+          in: query
+          required: false
+          description: The id of the last book received; the page starts after it
+          schema:
+            type: string
+            format: uuid
+            nullable: false
+      responses:
+        "200":
+          description: One page of books, in the order a shelf reads, and where the next page starts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookPage"
+        "400":
+          description: The `after` parameter is not an id
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /api/v1/bookshelves/{id}/books:
     post:
       summary: "A copy of this book on this bookshelf; the book is created when its ISBN is unknown"
@@ -169,70 +194,9 @@ components:
           nullable: false
           allOf:
             - $ref: "#/components/schemas/Bookshelf"
-    IsbnLookup:
+    Edition:
       type: object
-      additionalProperties: false
-      required: [isbn13, kind, title, subtitle, authors, series, collection, publisher,
-                 publicationYear, language, pageCount, summary, coverUrl, copies]
-      properties:
-        isbn13:
-          type: string
-          nullable: false
-          pattern: "^97[89][0-9]{10}$"
-        kind:
-          type: string
-          nullable: false
-          enum: [BOOK, BD, MANGA]
-        title:
-          type: string
-          nullable: false
-          minLength: 1
-        subtitle:
-          type: string
-          nullable: true
-        authors:
-          type: array
-          nullable: false
-          items:
-            $ref: "#/components/schemas/Author"
-        series:
-          nullable: true
-          allOf:
-            - $ref: "#/components/schemas/Series"
-        collection:
-          type: string
-          nullable: true
-        publisher:
-          type: string
-          nullable: true
-        publicationYear:
-          type: integer
-          nullable: true
-          minimum: 1
-        language:
-          type: string
-          nullable: true
-          description: ISO 639-1 code
-          pattern: "^[a-z]{2}$"
-        pageCount:
-          type: integer
-          nullable: true
-          minimum: 1
-        summary:
-          type: string
-          nullable: true
-        coverUrl:
-          type: string
-          nullable: true
-        copies:
-          type: array
-          nullable: false
-          description: The copies on the bookshelves the reader belongs to
-          items:
-            $ref: "#/components/schemas/Copy"
-    NewBook:
-      type: object
-      additionalProperties: false
+      description: One published version of a work, the thing an ISBN-13 identifies
       required: [isbn13, kind, title, subtitle, authors, series, collection, publisher,
                  publicationYear, language, pageCount, summary, coverUrl]
       properties:
@@ -286,6 +250,59 @@ components:
         coverUrl:
           type: string
           nullable: true
+    IsbnLookup:
+      description: The edition the sources know for an ISBN, with its copies on the reader's bookshelves
+      allOf:
+        - $ref: "#/components/schemas/Edition"
+        - type: object
+          required: [isbn13, copies]
+          properties:
+            isbn13:
+              type: string
+              nullable: false
+              pattern: "^97[89][0-9]{10}$"
+            copies:
+              type: array
+              nullable: false
+              description: The copies on the bookshelves the reader belongs to
+              items:
+                $ref: "#/components/schemas/Copy"
+    NewBook:
+      description: The edition to add
+      allOf:
+        - $ref: "#/components/schemas/Edition"
+    BookPage:
+      type: object
+      additionalProperties: false
+      required: [books, next]
+      properties:
+        books:
+          type: array
+          nullable: false
+          items:
+            $ref: "#/components/schemas/Book"
+        next:
+          type: string
+          format: uuid
+          nullable: true
+          description: The value of `after` for the next page; null on the last page
+    Book:
+      description: A stored edition, addressed by id
+      allOf:
+        - $ref: "#/components/schemas/Edition"
+        - type: object
+          required: [id, copies]
+          properties:
+            id:
+              type: string
+              format: uuid
+              nullable: false
+            copies:
+              type: array
+              nullable: false
+              description: The copies on the bookshelves the reader belongs to
+              items:
+                $ref: "#/components/schemas/Copy"
     Author:
       type: object
       additionalProperties: false

@@ -23,3 +23,6 @@
 
 ## v0.6.2
 - `NewBook.title`, `Author.name` and `Series.name` refuse a blank value with a `pattern` beside their `minLength: 1`. No byte of a request or an answer changes.
+
+## v0.7.0
+- `GET /api/v1/books`: the reader's catalogue, the house's books with a copy on a bookshelf they belong to, fifty at a time as a shelf reads; `after` the id of the last book received; the answer a `BookPage`, `books` and `next`, the `after` of the next page, null on the last, verified on its shape, no example; schema `Edition`, the thirteen fields of a published version of a work, `isbn13` nullable, the blank title refused; `NewBook`, `IsbnLookup` and `Book` compose over it with `allOf`, `IsbnLookup` its `isbn13` never null and `copies`, `Book` the stored edition addressed by `id` with `copies`; these three no longer say `additionalProperties: false`. No byte of an existing answer changes.
