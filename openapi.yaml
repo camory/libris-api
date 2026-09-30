@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Libris API
-  version: 0.7.0
+  version: 0.8.0
 paths:
   /api/v1/me:
     get:
@@ -54,27 +54,18 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-              examples:
-                400_NOT_AN_ISBN:
-                  $ref: "#/components/examples/NotAnIsbn"
         "404":
           description: Neither the house nor a source knows this ISBN
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-              examples:
-                404_UNKNOWN_ISBN:
-                  $ref: "#/components/examples/UnknownIsbn"
         "503":
           description: No source answered; a 5xx without this body means Libris itself is unavailable
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-              examples:
-                503_SOURCES_DOWN:
-                  $ref: "#/components/examples/SourcesDown"
   /api/v1/books:
     get:
       summary: "The reader's catalogue: the house's books with a copy on a bookshelf they belong to, fifty at a time, as a shelf reads"
@@ -115,8 +106,6 @@ paths:
             pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
             nullable: false
           examples:
-            ADD_ONE_PIECE_1:
-              value: "0b1e2d3c-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
             400_NOT_AN_ISBN:
               value: "0b1e2d3c-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
             404_NOT_MY_BOOKSHELF:
@@ -129,8 +118,6 @@ paths:
             schema:
               $ref: "#/components/schemas/NewBook"
             examples:
-              ADD_ONE_PIECE_1:
-                $ref: "#/components/examples/NewOnePiece1"
               400_NOT_AN_ISBN:
                 $ref: "#/components/examples/NewOnePiece1WrongDigit"
               404_NOT_MY_BOOKSHELF:
@@ -142,27 +129,54 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Copy"
-              examples:
-                ADD_ONE_PIECE_1:
-                  $ref: "#/components/examples/CopyOfOnePiece1"
         "400":
           description: A field is refused
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-              examples:
-                400_NOT_AN_ISBN:
-                  $ref: "#/components/examples/NotAnIsbn13"
         "404":
           description: The reader owns no such bookshelf
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-              examples:
-                404_NOT_MY_BOOKSHELF:
-                  $ref: "#/components/examples/NotMyBookshelf"
+  /api/v1/covers/{name}:
+    get:
+      summary: "A stored cover by the name of its picture; a name never changes its picture"
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: The picture's hash in hexadecimal
+          schema:
+            type: string
+            nullable: false
+            pattern: "^[0-9a-f]{64}$"
+          examples:
+            404_NO_COVER:
+              value: "0000000000000000000000000000000000000000000000000000000000000000"
+      responses:
+        "200":
+          description: The picture as stored, JPEG or WebP, to be kept for a year
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                nullable: false
+                enum: ["public, max-age=31536000, immutable"]
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: No stored cover bears this name
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
 components:
   schemas:
     CurrentReader:
@@ -198,7 +212,7 @@ components:
       type: object
       description: One published version of a work, the thing an ISBN-13 identifies
       required: [isbn13, kind, title, subtitle, authors, series, collection, publisher,
-                 publicationYear, language, pageCount, summary, coverUrl]
+                 publicationYear, language, pageCount, summary]
       properties:
         isbn13:
           type: string
@@ -247,16 +261,33 @@ components:
         summary:
           type: string
           nullable: true
-        coverUrl:
+    CoverCandidate:
+      type: object
+      description: A picture a source offers for the edition, handed out unchecked
+      additionalProperties: false
+      required: [source, url]
+      properties:
+        source:
           type: string
-          nullable: true
+          nullable: false
+          minLength: 1
+          description: The name Libris knows the source by, to give back on the add
+        url:
+          type: string
+          nullable: false
+          minLength: 1
     IsbnLookup:
       description: The edition the sources know for an ISBN, with its copies on the reader's bookshelves
       allOf:
         - $ref: "#/components/schemas/Edition"
         - type: object
-          required: [isbn13, copies]
+          required: [id, isbn13, copies, covers, coverUrl]
           properties:
+            id:
+              type: string
+              format: uuid
+              nullable: true
+              description: The house's edition when it holds the ISBN, null when it does not
             isbn13:
               type: string
               nullable: false
@@ -267,10 +298,29 @@ components:
               description: The copies on the bookshelves the reader belongs to
               items:
                 $ref: "#/components/schemas/Copy"
+            covers:
+              type: array
+              nullable: false
+              description: "The pictures on offer, in the order to try them: the house's own alone when it holds the edition, else the sources' in cascade order; empty when none"
+              items:
+                $ref: "#/components/schemas/CoverCandidate"
+            coverUrl:
+              type: string
+              nullable: true
+              deprecated: true
+              description: The first candidate's url, or null; read covers instead
     NewBook:
       description: The edition to add
       allOf:
         - $ref: "#/components/schemas/Edition"
+        - type: object
+          required: [coverSource]
+          properties:
+            coverSource:
+              type: string
+              nullable: true
+              minLength: 1
+              description: The source of the cover the card showed, by the name the lookup gave, null when it showed the stand-in; ignored when the house already holds the edition, and a name that is not a source's, the house's own included, is taken as null, the edition then added with no source
     BookPage:
       type: object
       additionalProperties: false
@@ -291,12 +341,16 @@ components:
       allOf:
         - $ref: "#/components/schemas/Edition"
         - type: object
-          required: [id, copies]
+          required: [id, copies, coverUrl]
           properties:
             id:
               type: string
               format: uuid
               nullable: false
+            coverUrl:
+              type: string
+              nullable: true
+              description: The relative address of the stored cover, null while no picture is stored
             copies:
               type: array
               nullable: false
@@ -390,6 +444,7 @@ components:
   examples:
     OnePiece1:
       value:
+        id: null
         isbn13: "9782723488525"
         kind: MANGA
         title: "Romance dawn"
@@ -408,10 +463,18 @@ components:
         language: "fr"
         pageCount: 203
         summary: null
-        coverUrl: "https://covers.openlibrary.org/b/isbn/9782723488525-L.jpg"
+        covers:
+          - source: inventaire.io
+            url: "https://inventaire.io/img/entities/480x600/34d6e7d99cec5b0922b9eccfeb03748ab2b4db99"
+          - source: Open Library
+            url: "https://covers.openlibrary.org/b/isbn/9782723488525-L.jpg?default=false"
+          - source: BnF
+            url: "https://catalogue.bnf.fr/couverture?&appName=NE&idArk=ark:/12148/cb43636708p&couverture=1"
+        coverUrl: "https://inventaire.io/img/entities/480x600/34d6e7d99cec5b0922b9eccfeb03748ab2b4db99"
         copies: []
     OnePiece2Owned:
       value:
+        id: "3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f"
         isbn13: "9782723489898"
         kind: MANGA
         title: "Aux prises avec Baggy et ses hommes"
@@ -430,7 +493,10 @@ components:
         language: "fr"
         pageCount: 208
         summary: null
-        coverUrl: "https://covers.openlibrary.org/b/isbn/9782723489898-L.jpg"
+        covers:
+          - source: Libris
+            url: "/api/v1/covers/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        coverUrl: "/api/v1/covers/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
         copies:
           - id: "6f1d2c3b-4a59-4e6f-8b70-1c2d3e4f5a61"
             bookshelf:
@@ -460,7 +526,7 @@ components:
         language: "fr"
         pageCount: 203
         summary: null
-        coverUrl: "https://covers.openlibrary.org/b/isbn/9782723488525-L.jpg"
+        coverSource: inventaire.io
     NewOnePiece1WrongDigit:
       value:
         isbn13: "9782723488526"
@@ -481,41 +547,4 @@ components:
         language: "fr"
         pageCount: 203
         summary: null
-        coverUrl: "https://covers.openlibrary.org/b/isbn/9782723488525-L.jpg"
-    CopyOfOnePiece1:
-      value:
-        id: "5e0c1b2a-3948-4d5e-8a6f-0b1c2d3e4f50"
-        bookshelf:
-          id: "0b1e2d3c-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
-          name: "Bibliothèque de Léa"
-    NotAnIsbn:
-      value:
-        type: "/problems/validation"
-        title: "Bad Request"
-        status: 400
-        errors:
-          - field: "isbn"
-            code: "not-an-isbn"
-    NotAnIsbn13:
-      value:
-        type: "/problems/validation"
-        title: "Bad Request"
-        status: 400
-        errors:
-          - field: "isbn13"
-            code: "not-an-isbn"
-    UnknownIsbn:
-      value:
-        type: "/problems/not-found"
-        title: "Not Found"
-        status: 404
-    SourcesDown:
-      value:
-        type: "/problems/sources-unavailable"
-        title: "Service Unavailable"
-        status: 503
-    NotMyBookshelf:
-      value:
-        type: "/problems/not-found"
-        title: "Not Found"
-        status: 404
+        coverSource: inventaire.io
