@@ -32,3 +32,6 @@
 
 ## v0.8.1
 - `POST /api/v1/bookshelves/{id}/books`: the `201` is keyed again, `201_ADD_ONE_PIECE_1` on the bookshelf id and on the body `NewOnePiece1`, so the case sends an ISBN whose check digit holds; its answer stays verified on its schema, with no example. No byte of a request or an answer changes.
+
+## v0.8.2
+- `GET /api/v1/covers/{name}`: `400` when the text is not a cover name, sixty-four lower-case hexadecimal digits, keyed `400_NOT_A_COVER_NAME` on the path example `ABC`, verified on the `Problem` schema with no example; `404` stays for a well-formed name no stored cover bears. A malformed name answered `404` before.

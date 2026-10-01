@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Libris API
-  version: 0.8.1
+  version: 0.8.2
 paths:
   /api/v1/me:
     get:
@@ -158,6 +158,8 @@ paths:
             nullable: false
             pattern: "^[0-9a-f]{64}$"
           examples:
+            400_NOT_A_COVER_NAME:
+              value: "ABC"
             404_NO_COVER:
               value: "0000000000000000000000000000000000000000000000000000000000000000"
       responses:
@@ -175,8 +177,14 @@ paths:
               schema:
                 type: string
                 format: binary
+        "400":
+          description: The text is not a cover name
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "404":
-          description: No stored cover bears this name
+          description: A well-formed name no stored cover bears
           content:
             application/problem+json:
               schema:
