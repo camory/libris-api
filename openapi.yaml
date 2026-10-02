@@ -1,7 +1,7 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: Libris API
-  version: 0.8.2
+  version: 0.9.0
 paths:
   /api/v1/me:
     get:
@@ -23,7 +23,6 @@ paths:
           description: The ISBN-13 as thirteen digits
           schema:
             type: string
-            nullable: false
             pattern: "^97[89][0-9]{10}$"
           examples:
             ONE_PIECE_1:
@@ -33,7 +32,7 @@ paths:
             400_NOT_AN_ISBN:
               value: "9782723488526"
             404_UNKNOWN_ISBN:
-              value: "9782000000006"
+              value: "9782000000013"
             503_SOURCES_DOWN:
               value: "9791000000008"
       responses:
@@ -77,7 +76,6 @@ paths:
           schema:
             type: string
             format: uuid
-            nullable: false
       responses:
         "200":
           description: One page of books, in the order a shelf reads, and where the next page starts
@@ -101,10 +99,7 @@ paths:
           description: The bookshelf's id
           schema:
             type: string
-            # Temporary: `pattern` stands in for `format: uuid` until Contracteer 4.1.0,
-            # whose 4.0.0 verifier sends a path value with an encoded slash for the uuid case.
-            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
-            nullable: false
+            format: uuid
           examples:
             201_ADD_ONE_PIECE_1:
               value: "0b1e2d3c-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
@@ -155,7 +150,6 @@ paths:
           description: The picture's hash in hexadecimal
           schema:
             type: string
-            nullable: false
             pattern: "^[0-9a-f]{64}$"
           examples:
             400_NOT_A_COVER_NAME:
@@ -164,19 +158,15 @@ paths:
               value: "0000000000000000000000000000000000000000000000000000000000000000"
       responses:
         "200":
-          description: The picture as stored, JPEG or WebP, to be kept for a year
+          description: The picture as stored, an image of any format
           headers:
             Cache-Control:
               required: true
               schema:
                 type: string
-                nullable: false
                 enum: ["public, max-age=31536000, immutable"]
           content:
-            image/*:
-              schema:
-                type: string
-                format: binary
+            image/*: {}
         "400":
           description: The text is not a cover name
           content:
@@ -199,27 +189,20 @@ components:
         id:
           type: string
           format: uuid
-          nullable: false
         username:
           type: string
-          nullable: false
           minLength: 1
         displayName:
           type: string
-          nullable: false
           minLength: 1
         email:
           type: string
           format: email
-          nullable: false
         role:
           type: string
-          nullable: false
           enum: [READER, ADMIN]
         defaultBookshelf:
-          nullable: false
-          allOf:
-            - $ref: "#/components/schemas/Bookshelf"
+          $ref: "#/components/schemas/Bookshelf"
     Edition:
       type: object
       description: One published version of a work, the thing an ISBN-13 identifies
@@ -227,52 +210,41 @@ components:
                  publicationYear, language, pageCount, summary]
       properties:
         isbn13:
-          type: string
-          nullable: true
+          type: [string, "null"]
           pattern: "^97[89][0-9]{10}$"
         kind:
           type: string
-          nullable: false
           enum: [BOOK, BD, MANGA]
         title:
           type: string
-          nullable: false
           minLength: 1
           pattern: "\\S"
         subtitle:
-          type: string
-          nullable: true
+          type: [string, "null"]
         authors:
           type: array
-          nullable: false
           items:
             $ref: "#/components/schemas/Author"
         series:
-          nullable: true
-          allOf:
+          oneOf:
             - $ref: "#/components/schemas/Series"
+            - type: "null"
         collection:
-          type: string
-          nullable: true
+          type: [string, "null"]
         publisher:
-          type: string
-          nullable: true
+          type: [string, "null"]
         publicationYear:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
           minimum: 1
         language:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: ISO 639-1 code
           pattern: "^[a-z]{2}$"
         pageCount:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
           minimum: 1
         summary:
-          type: string
-          nullable: true
+          type: [string, "null"]
     CoverCandidate:
       type: object
       description: A picture a source offers for the edition, handed out unchecked
@@ -281,13 +253,11 @@ components:
       properties:
         source:
           type: string
-          nullable: false
           minLength: 1
           description: The name Libris knows the source by, to give back on the add
         url:
           type: string
-          nullable: false
-          minLength: 1
+          format: uri-reference
     IsbnLookup:
       description: The edition the sources know for an ISBN, with its copies on the reader's bookshelves
       allOf:
@@ -296,29 +266,24 @@ components:
           required: [id, isbn13, copies, covers, coverUrl]
           properties:
             id:
-              type: string
+              type: [string, "null"]
               format: uuid
-              nullable: true
               description: The house's edition when it holds the ISBN, null when it does not
             isbn13:
               type: string
-              nullable: false
               pattern: "^97[89][0-9]{10}$"
             copies:
               type: array
-              nullable: false
               description: The copies on the bookshelves the reader belongs to
               items:
                 $ref: "#/components/schemas/Copy"
             covers:
               type: array
-              nullable: false
               description: "The pictures on offer, in the order to try them: the house's own alone when it holds the edition, else the sources' in cascade order; empty when none"
               items:
                 $ref: "#/components/schemas/CoverCandidate"
             coverUrl:
-              type: string
-              nullable: true
+              type: [string, "null"]
               deprecated: true
               description: The first candidate's url, or null; read covers instead
     NewBook:
@@ -329,8 +294,7 @@ components:
           required: [coverSource]
           properties:
             coverSource:
-              type: string
-              nullable: true
+              type: [string, "null"]
               minLength: 1
               description: The source of the cover the card showed, by the name the lookup gave, null when it showed the stand-in; ignored when the house already holds the edition, and a name that is not a source's, the house's own included, is taken as null, the edition then added with no source
     BookPage:
@@ -340,13 +304,11 @@ components:
       properties:
         books:
           type: array
-          nullable: false
           items:
             $ref: "#/components/schemas/Book"
         next:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: The value of `after` for the next page; null on the last page
     Book:
       description: A stored edition, addressed by id
@@ -358,14 +320,12 @@ components:
             id:
               type: string
               format: uuid
-              nullable: false
             coverUrl:
-              type: string
-              nullable: true
+              type: [string, "null"]
+              pattern: "^/api/v1/covers/[0-9a-f]{64}$"
               description: The relative address of the stored cover, null while no picture is stored
             copies:
               type: array
-              nullable: false
               description: The copies on the bookshelves the reader belongs to
               items:
                 $ref: "#/components/schemas/Copy"
@@ -376,12 +336,10 @@ components:
       properties:
         name:
           type: string
-          nullable: false
           minLength: 1
           pattern: "\\S"
         role:
           type: string
-          nullable: false
           enum: [WRITER, ARTIST, COLOURIST, TRANSLATOR]
     Series:
       type: object
@@ -390,12 +348,10 @@ components:
       properties:
         name:
           type: string
-          nullable: false
           minLength: 1
           pattern: "\\S"
         volumeNumber:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
           minimum: 1
     Copy:
       type: object
@@ -405,11 +361,8 @@ components:
         id:
           type: string
           format: uuid
-          nullable: false
         bookshelf:
-          nullable: false
-          allOf:
-            - $ref: "#/components/schemas/Bookshelf"
+          $ref: "#/components/schemas/Bookshelf"
     Bookshelf:
       type: object
       additionalProperties: false
@@ -418,10 +371,8 @@ components:
         id:
           type: string
           format: uuid
-          nullable: false
         name:
           type: string
-          nullable: false
           minLength: 1
     Problem:
       type: object
@@ -429,17 +380,13 @@ components:
       properties:
         type:
           type: string
-          nullable: false
           description: A slug under /problems/ the client switches on
         title:
           type: string
-          nullable: false
         status:
           type: integer
-          nullable: false
         errors:
           type: array
-          nullable: false
           minItems: 1
           description: One entry per refused request field, on a validation problem only
           items:
@@ -449,10 +396,8 @@ components:
             properties:
               field:
                 type: string
-                nullable: false
               code:
                 type: string
-                nullable: false
   examples:
     OnePiece1:
       value:
@@ -477,12 +422,12 @@ components:
         summary: null
         covers:
           - source: inventaire.io
-            url: "https://inventaire.io/img/entities/480x600/34d6e7d99cec5b0922b9eccfeb03748ab2b4db99"
+            url: "https://inventaire.io/img/entities/100x600/34d6e7d99cec5b0922b9eccfeb03748ab2b4db99"
           - source: Open Library
             url: "https://covers.openlibrary.org/b/isbn/9782723488525-L.jpg?default=false"
           - source: BnF
             url: "https://catalogue.bnf.fr/couverture?&appName=NE&idArk=ark:/12148/cb43636708p&couverture=1"
-        coverUrl: "https://inventaire.io/img/entities/480x600/34d6e7d99cec5b0922b9eccfeb03748ab2b4db99"
+        coverUrl: "https://inventaire.io/img/entities/100x600/34d6e7d99cec5b0922b9eccfeb03748ab2b4db99"
         copies: []
     OnePiece2Owned:
       value:

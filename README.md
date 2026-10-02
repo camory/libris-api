@@ -1,7 +1,7 @@
 # Libris API contract
 
 `openapi.yaml` is the single source of truth of the Libris HTTP API
-(OpenAPI 3.0.3), verified on both sides with [Contracteer](https://contracteer.dev).
+(OpenAPI 3.1.0), verified on both sides with [Contracteer](https://contracteer.dev).
 
 ## Versions
 
