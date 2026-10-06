@@ -38,3 +38,6 @@
 
 ## v0.9.0
 - The document moves to OpenAPI 3.1.0: `nullable` leaves, a field that may be null says `type: [<type>, "null"]`, `Edition.series` is a `Series` or null by `oneOf`, `CurrentReader.defaultBookshelf` and `Copy.bookshelf` point at `Bookshelf` directly, and the cover's `200` body is `image/*` with no schema. `Book.coverUrl` gains a `pattern`, the address of the cover operation; `CoverCandidate.url` is a `uri-reference`; the bookshelf `id` of `POST /api/v1/bookshelves/{id}/books` is a `format: uuid` again, so a text that is not one answers `400` or `404` with a `Problem`. The cover's `200` no longer names JPEG or WebP: any image, under the media type it was stored with. `404_UNKNOWN_ISBN` sends `9782000000013`, which no source knows, where `9782000000006` had become a real record; `ONE_PIECE_1` offers inventaire.io at `100x600`. No byte of an answer changes.
+
+## v0.10.0
+- `IsbnLookup` loses `coverUrl`, deprecated since v0.8.0: `covers` says it all. Nothing else changes.

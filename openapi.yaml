@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Libris API
-  version: 0.9.0
+  version: 0.10.0
 paths:
   /api/v1/me:
     get:
@@ -263,7 +263,7 @@ components:
       allOf:
         - $ref: "#/components/schemas/Edition"
         - type: object
-          required: [id, isbn13, copies, covers, coverUrl]
+          required: [id, isbn13, copies, covers]
           properties:
             id:
               type: [string, "null"]
@@ -282,10 +282,6 @@ components:
               description: "The pictures on offer, in the order to try them: the house's own alone when it holds the edition, else the sources' in cascade order; empty when none"
               items:
                 $ref: "#/components/schemas/CoverCandidate"
-            coverUrl:
-              type: [string, "null"]
-              deprecated: true
-              description: The first candidate's url, or null; read covers instead
     NewBook:
       description: The edition to add
       allOf:
@@ -427,7 +423,6 @@ components:
             url: "https://covers.openlibrary.org/b/isbn/9782723488525-L.jpg?default=false"
           - source: BnF
             url: "https://catalogue.bnf.fr/couverture?&appName=NE&idArk=ark:/12148/cb43636708p&couverture=1"
-        coverUrl: "https://inventaire.io/img/entities/100x600/34d6e7d99cec5b0922b9eccfeb03748ab2b4db99"
         copies: []
     OnePiece2Owned:
       value:
@@ -453,7 +448,6 @@ components:
         covers:
           - source: Libris
             url: "/api/v1/covers/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
-        coverUrl: "/api/v1/covers/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
         copies:
           - id: "6f1d2c3b-4a59-4e6f-8b70-1c2d3e4f5a61"
             bookshelf:
