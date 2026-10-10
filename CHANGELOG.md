@@ -41,3 +41,7 @@
 
 ## v0.10.0
 - `IsbnLookup` loses `coverUrl`, deprecated since v0.8.0: `covers` says it all. Nothing else changes.
+
+## v0.11.0
+- Bookshelves and their members. `GET /api/v1/bookshelves`: the bookshelves the reader belongs to, each a `ReaderBookshelf`, a `Bookshelf` with the reader's `role` on it, `MembershipRole` `OWNER` or `VIEWER`. `POST /api/v1/bookshelves`: a `NewBookshelf` `{name}`, the reader its one owner, `201` the `Bookshelf`, `400` a blank name, `409` a name taken. `GET /api/v1/bookshelves/{id}`: a `BookshelfWithMembers`, its `members` each a `Member`, a `Reader` `{id, displayName}` with their `role`; `404` when the reader is not a member. `GET /api/v1/readers`: every `Reader` Libris knows. `POST /api/v1/bookshelves/{id}/members`: a `NewMember` `{readerId, role}`, `201` the `Member`, `400` a reader Libris does not know, `404` a bookshelf the reader does not own, `409` a reader already a member. `PUT /api/v1/me/default-bookshelf`: `{id}`, `204`, `404` a bookshelf the reader does not own.
+- No schema says `additionalProperties: false` any more: an answer may carry a field the document does not name, and the verifier no longer refuses it. The `400` of `POST /api/v1/bookshelves/{id}/books` reads *The request is invalid*, as the new operations' do. No byte of an existing request or answer changes.

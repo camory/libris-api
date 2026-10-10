@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Libris API
-  version: 0.10.0
+  version: 0.11.0
 paths:
   /api/v1/me:
     get:
@@ -13,6 +13,39 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CurrentReader"
+  /api/v1/me/default-bookshelf:
+    put:
+      summary: "The reader's default bookshelf, the one their adds go to"
+      requestBody:
+        required: true
+        description: The bookshelf to make the reader's default
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: string
+                  format: uuid
+            examples:
+              404_NOT_MY_BOOKSHELF:
+                $ref: "#/components/examples/DefaultBookshelfNotMine"
+      responses:
+        "204":
+          description: The bookshelf is the reader's default
+        "400":
+          description: The request is invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: The reader owns no such bookshelf
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /api/v1/isbn/{isbn}:
     get:
       summary: "What is known about an ISBN: the house's book with its copies on the reader's bookshelves, or what the public sources say"
@@ -89,6 +122,141 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /api/v1/bookshelves:
+    get:
+      summary: "The bookshelves the reader belongs to, each with the reader's role on it"
+      responses:
+        "200":
+          description: The bookshelves the reader belongs to
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReaderBookshelf"
+    post:
+      summary: "A new bookshelf, the reader its one owner"
+      requestBody:
+        required: true
+        description: The bookshelf as the reader names it
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewBookshelf"
+            examples:
+              400_BLANK_NAME:
+                $ref: "#/components/examples/NewBookshelfBlank"
+              409_TAKEN_NAME:
+                $ref: "#/components/examples/NewBookshelfSalon"
+      responses:
+        "201":
+          description: The bookshelf created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bookshelf"
+        "400":
+          description: The request is invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: The name is taken by a bookshelf the reader belongs to
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/v1/bookshelves/{id}:
+    get:
+      summary: "A bookshelf the reader belongs to, with its members"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The bookshelf's id
+          schema:
+            type: string
+            format: uuid
+          examples:
+            404_NOT_A_MEMBER:
+              value: "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b"
+      responses:
+        "200":
+          description: The bookshelf and its members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookshelfWithMembers"
+        "400":
+          description: The id is not one
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: The reader belongs to no such bookshelf
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/v1/bookshelves/{id}/members:
+    post:
+      summary: "A reader Libris knows added to the bookshelf with a role"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The bookshelf's id
+          schema:
+            type: string
+            format: uuid
+          examples:
+            400_UNKNOWN_READER:
+              value: "0b1e2d3c-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
+            404_NOT_MY_BOOKSHELF:
+              value: "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b"
+            409_ALREADY_A_MEMBER:
+              value: "0b1e2d3c-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
+      requestBody:
+        required: true
+        description: The reader to add and their role
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewMember"
+            examples:
+              400_UNKNOWN_READER:
+                $ref: "#/components/examples/NewMemberUnknown"
+              404_NOT_MY_BOOKSHELF:
+                $ref: "#/components/examples/NewMemberEve"
+              409_ALREADY_A_MEMBER:
+                $ref: "#/components/examples/NewMemberTophe"
+      responses:
+        "201":
+          description: The reader now a member of the bookshelf
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "400":
+          description: The request is invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: The reader asking owns no such bookshelf
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: The reader added is already a member
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /api/v1/bookshelves/{id}/books:
     post:
       summary: "A copy of this book on this bookshelf; the book is created when its ISBN is unknown"
@@ -129,7 +297,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Copy"
         "400":
-          description: A field is refused
+          description: The request is invalid
           content:
             application/problem+json:
               schema:
@@ -140,6 +308,18 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /api/v1/readers:
+    get:
+      summary: "The readers Libris knows"
+      responses:
+        "200":
+          description: Every reader Libris knows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reader"
   /api/v1/covers/{name}:
     get:
       summary: "A stored cover by the name of its picture; a name never changes its picture"
@@ -183,7 +363,6 @@ components:
   schemas:
     CurrentReader:
       type: object
-      additionalProperties: false
       required: [id, username, displayName, email, role, defaultBookshelf]
       properties:
         id:
@@ -248,7 +427,6 @@ components:
     CoverCandidate:
       type: object
       description: A picture a source offers for the edition, handed out unchecked
-      additionalProperties: false
       required: [source, url]
       properties:
         source:
@@ -295,7 +473,6 @@ components:
               description: The source of the cover the card showed, by the name the lookup gave, null when it showed the stand-in; ignored when the house already holds the edition, and a name that is not a source's, the house's own included, is taken as null, the edition then added with no source
     BookPage:
       type: object
-      additionalProperties: false
       required: [books, next]
       properties:
         books:
@@ -327,7 +504,6 @@ components:
                 $ref: "#/components/schemas/Copy"
     Author:
       type: object
-      additionalProperties: false
       required: [name, role]
       properties:
         name:
@@ -339,7 +515,6 @@ components:
           enum: [WRITER, ARTIST, COLOURIST, TRANSLATOR]
     Series:
       type: object
-      additionalProperties: false
       required: [name, volumeNumber]
       properties:
         name:
@@ -351,7 +526,6 @@ components:
           minimum: 1
     Copy:
       type: object
-      additionalProperties: false
       required: [id, bookshelf]
       properties:
         id:
@@ -361,7 +535,6 @@ components:
           $ref: "#/components/schemas/Bookshelf"
     Bookshelf:
       type: object
-      additionalProperties: false
       required: [id, name]
       properties:
         id:
@@ -370,6 +543,65 @@ components:
         name:
           type: string
           minLength: 1
+    NewBookshelf:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          pattern: "\\S"
+    ReaderBookshelf:
+      description: A bookshelf as the reader sees it, with their role on it
+      allOf:
+        - $ref: "#/components/schemas/Bookshelf"
+        - type: object
+          required: [role]
+          properties:
+            role:
+              $ref: "#/components/schemas/MembershipRole"
+    BookshelfWithMembers:
+      allOf:
+        - $ref: "#/components/schemas/Bookshelf"
+        - type: object
+          required: [members]
+          properties:
+            members:
+              type: array
+              items:
+                $ref: "#/components/schemas/Member"
+    Reader:
+      type: object
+      description: A reader as other readers see them
+      required: [id, displayName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+          minLength: 1
+    Member:
+      description: A reader as a member of a bookshelf, with their role on it
+      allOf:
+        - $ref: "#/components/schemas/Reader"
+        - type: object
+          required: [role]
+          properties:
+            role:
+              $ref: "#/components/schemas/MembershipRole"
+    NewMember:
+      type: object
+      required: [readerId, role]
+      properties:
+        readerId:
+          type: string
+          format: uuid
+        role:
+          $ref: "#/components/schemas/MembershipRole"
+    MembershipRole:
+      type: string
+      enum: [OWNER, VIEWER]
     Problem:
       type: object
       required: [type, title, status]
@@ -387,7 +619,6 @@ components:
           description: One entry per refused request field, on a validation problem only
           items:
             type: object
-            additionalProperties: false
             required: [field, code]
             properties:
               field:
@@ -499,3 +730,24 @@ components:
         pageCount: 203
         summary: null
         coverSource: inventaire.io
+    NewBookshelfBlank:
+      value:
+        name: "   "
+    NewBookshelfSalon:
+      value:
+        name: "Salon"
+    NewMemberEve:
+      value:
+        readerId: "7f8091a2-b3c4-4d5e-8f6a-7b8c9d0e1f2a"
+        role: VIEWER
+    NewMemberTophe:
+      value:
+        readerId: "6e7f8091-a2b3-4c4d-9e5f-6a7b8c9d0e1f"
+        role: OWNER
+    NewMemberUnknown:
+      value:
+        readerId: "00000000-0000-4000-8000-000000000000"
+        role: VIEWER
+    DefaultBookshelfNotMine:
+      value:
+        id: "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b"
