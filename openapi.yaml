@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Libris API
-  version: 0.11.0
+  version: 0.12.0
 paths:
   /api/v1/me:
     get:
@@ -122,6 +122,18 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /api/v1/series:
+    get:
+      summary: "The series of the reader's catalogue: each series with an edition on a bookshelf they belong to, by name"
+      responses:
+        "200":
+          description: The series, in the order of their names, ignoring case and accents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Series"
   /api/v1/bookshelves:
     get:
       summary: "The bookshelves the reader belongs to, each with the reader's role on it"
@@ -392,8 +404,7 @@ components:
           type: [string, "null"]
           pattern: "^97[89][0-9]{10}$"
         kind:
-          type: string
-          enum: [BOOK, BD, MANGA]
+          $ref: "#/components/schemas/Kind"
         title:
           type: string
           minLength: 1
@@ -406,7 +417,7 @@ components:
             $ref: "#/components/schemas/Author"
         series:
           oneOf:
-            - $ref: "#/components/schemas/Series"
+            - $ref: "#/components/schemas/SeriesEntry"
             - type: "null"
         collection:
           type: [string, "null"]
@@ -513,8 +524,12 @@ components:
         role:
           type: string
           enum: [WRITER, ARTIST, COLOURIST, TRANSLATOR]
-    Series:
+    Kind:
+      type: string
+      enum: [BOOK, BD, MANGA]
+    SeriesEntry:
       type: object
+      description: An edition's place in a series
       required: [name, volumeNumber]
       properties:
         name:
@@ -524,6 +539,28 @@ components:
         volumeNumber:
           type: [integer, "null"]
           minimum: 1
+    Series:
+      type: object
+      description: A series of the reader's catalogue
+      required: [name, volumeCount, coverUrl, kind]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          pattern: "\\S"
+        volumeCount:
+          type: integer
+          minimum: 1
+          description: The editions of the series on the reader's bookshelves, each once
+        coverUrl:
+          type: [string, "null"]
+          pattern: "^/api/v1/covers/[0-9a-f]{64}$"
+          description: The cover of the series' first edition as a shelf reads, null when it has none
+        kind:
+          description: The kind every edition of the series shares, null when they differ
+          oneOf:
+            - $ref: "#/components/schemas/Kind"
+            - type: "null"
     Copy:
       type: object
       required: [id, bookshelf]
