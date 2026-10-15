@@ -48,3 +48,6 @@
 
 ## v0.12.0
 - `GET /api/v1/series`: the series of the reader's catalogue, each with an edition on a bookshelf they belong to, by name, in one answer, an array of `Series` `{name, volumeCount, coverUrl, kind}`, `volumeCount` the editions on the reader's bookshelves, `coverUrl` the first edition's as a shelf reads or null, `kind` the one every edition shares or null; verified on its shape, no example. The edition's `Series` becomes `SeriesEntry`, its place in a series; the kind becomes a schema of its own, `Kind`, which `Edition.kind` and `Series.kind` share. No byte of an existing answer changes.
+
+## v0.12.1
+- `GET /api/v1/series` promises no order: the screen sorts the series. No byte of an answer changes. Supersedes v0.12.0, which nothing pins.
