@@ -51,3 +51,6 @@
 
 ## v0.12.1
 - `GET /api/v1/series` promises no order: the screen sorts the series. No byte of an answer changes. Supersedes v0.12.0, which nothing pins.
+
+## v0.13.0
+- `GET /api/v1/series/{id}`: a series of the reader's catalogue with its editions, a `SeriesWithBooks`, the `Series` with `books`, at least one `Book`, the editions of the series on a bookshelf the reader belongs to, each with its copies there, in no promised order, not paged; verified on its shape, no example; `400` an id that is not one; `404` when no edition of the series sits on a bookshelf the reader belongs to, keyed `404_NOT_IN_MY_CATALOGUE`. `Series` gains `id`, required, the series' own. No byte of an existing answer changes but the new field.

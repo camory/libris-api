@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Libris API
-  version: 0.12.1
+  version: 0.13.0
 paths:
   /api/v1/me:
     get:
@@ -134,6 +134,39 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Series"
+  /api/v1/series/{id}:
+    get:
+      summary: "A series of the reader's catalogue, with its editions on a bookshelf they belong to"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The series' id
+          schema:
+            type: string
+            format: uuid
+          examples:
+            404_NOT_IN_MY_CATALOGUE:
+              value: "5b6c7d8e-9f0a-4b1c-8d2e-3f4a5b6c7d8e"
+      responses:
+        "200":
+          description: The series and its editions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeriesWithBooks"
+        "400":
+          description: The id is not one
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: No edition of the series sits on a bookshelf the reader belongs to
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /api/v1/bookshelves:
     get:
       summary: "The bookshelves the reader belongs to, each with the reader's role on it"
@@ -542,8 +575,11 @@ components:
     Series:
       type: object
       description: A series of the reader's catalogue
-      required: [name, volumeCount, coverUrl, kind]
+      required: [id, name, volumeCount, coverUrl, kind]
       properties:
+        id:
+          type: string
+          format: uuid
         name:
           type: string
           minLength: 1
@@ -561,6 +597,18 @@ components:
           oneOf:
             - $ref: "#/components/schemas/Kind"
             - type: "null"
+    SeriesWithBooks:
+      allOf:
+        - $ref: "#/components/schemas/Series"
+        - type: object
+          required: [books]
+          properties:
+            books:
+              type: array
+              minItems: 1
+              description: The editions of the series on the bookshelves the reader belongs to
+              items:
+                $ref: "#/components/schemas/Book"
     Copy:
       type: object
       required: [id, bookshelf]
