@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Libris API
-  version: 0.13.0
+  version: 0.14.0
 paths:
   /api/v1/me:
     get:
@@ -118,6 +118,39 @@ paths:
                 $ref: "#/components/schemas/BookPage"
         "400":
           description: The `after` parameter is not an id
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/v1/books/{id}:
+    get:
+      summary: "An edition of the reader's catalogue, with its copies on the bookshelves they belong to"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The edition's id
+          schema:
+            type: string
+            format: uuid
+          examples:
+            404_NOT_IN_MY_CATALOGUE:
+              value: "3e4f5a6b-7c8d-4e9f-a0b1-c2d3e4f5a6b7"
+      responses:
+        "200":
+          description: The edition and its copies on the bookshelves the reader belongs to, at least one
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "400":
+          description: The id is not one
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: No copy of the edition sits on a bookshelf the reader belongs to
           content:
             application/problem+json:
               schema:
