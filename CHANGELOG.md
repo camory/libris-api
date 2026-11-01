@@ -57,3 +57,6 @@
 
 ## v0.14.0
 - `GET /api/v1/books/{id}`: an edition of the reader's catalogue, the catalogue's `Book` read for one edition, with its copies on the bookshelves the reader belongs to, at least one; verified on its shape, no example; `400` an id that is not one; `404` when no copy of the edition sits on a bookshelf the reader belongs to, keyed `404_NOT_IN_MY_CATALOGUE`. No schema changes; no byte of an existing answer changes.
+
+## v0.15.0
+- `GET /api/v1/series-names`: the names of the series the house holds, an array of strings, each once, none blank, in no promised order; verified on its shape, no example. No schema changes; no byte of an existing answer changes.
