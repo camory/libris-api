@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Libris API
-  version: 0.15.0
+  version: 0.16.0
 paths:
   /api/v1/me:
     get:
@@ -401,6 +401,37 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /api/v1/copies/{id}:
+    delete:
+      summary: "A copy removed from a bookshelf the reader owns"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The copy's id
+          schema:
+            type: string
+            format: uuid
+          examples:
+            204_REMOVE_ONE_PIECE_1:
+              value: "4d5e6f70-8192-4a3b-9c4d-5e6f708192a3"
+            404_NOT_MY_COPY:
+              value: "8b9c0d1e-2f3a-4b4c-9d5e-6f7a8b9c0d1e"
+      responses:
+        "204":
+          description: The copy is removed
+        "400":
+          description: The id is not one
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: The reader owns no such copy
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /api/v1/readers:
     get:
       summary: "The readers Libris knows"
@@ -665,7 +696,7 @@ components:
           type: string
           format: uuid
         bookshelf:
-          $ref: "#/components/schemas/Bookshelf"
+          $ref: "#/components/schemas/ReaderBookshelf"
     Bookshelf:
       type: object
       required: [id, name]
@@ -817,10 +848,12 @@ components:
             bookshelf:
               id: "0b1e2d3c-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
               name: "Bibliothèque de Léa"
+              role: VIEWER
           - id: "7a2e3d4c-5b6a-4f70-9c81-2d3e4f5a6b72"
             bookshelf:
               id: "1c2f3e4d-5a6b-4c7d-9e8f-0a1b2c3d4e5f"
               name: "Salon"
+              role: OWNER
     NewOnePiece1:
       value:
         isbn13: "9782723488525"
