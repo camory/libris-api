@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Libris API
-  version: 0.16.0
+  version: 0.17.0
 paths:
   /api/v1/me:
     get:
@@ -206,6 +206,21 @@ paths:
       responses:
         "200":
           description: The names of the house's series, in no promised order
+          content:
+            application/json:
+              schema:
+                type: array
+                uniqueItems: true
+                items:
+                  type: string
+                  minLength: 1
+                  pattern: "\\S"
+  /api/v1/author-names:
+    get:
+      summary: "The names of the authors the house holds, each once"
+      responses:
+        "200":
+          description: The names of the house's authors, in no promised order
           content:
             application/json:
               schema:

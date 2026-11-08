@@ -63,3 +63,6 @@
 
 ## v0.16.0
 - `DELETE /api/v1/copies/{id}`: a copy removed from a bookshelf the reader owns, its edition kept, `204` with no body; `400` an id that is not one; `404` when the reader owns no such copy, an id Libris does not know, a copy already removed, or one on a bookshelf they join as a guest or do not belong to; keyed `204_REMOVE_ONE_PIECE_1` and `404_NOT_MY_COPY`. `Copy.bookshelf` becomes a `ReaderBookshelf`, the reader's `role` on the copy's bookshelf, wherever a copy appears: `Book`, `IsbnLookup` and the add's `201`; `ONE_PIECE_2_OWNED` answers its copies with a role. No byte of an existing answer changes but the new field.
+
+## v0.17.0
+- `GET /api/v1/author-names`: the names of the authors the house holds, an array of strings, each once, none blank, in no promised order; verified on its shape, no example. No schema changes; no byte of an existing answer changes.
