@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Libris API
-  version: 0.17.0
+  version: 0.18.0
 paths:
   /api/v1/me:
     get:
@@ -155,6 +155,52 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+    put:
+      summary: "An edition the house holds, saved with the fields the reader sends"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The edition's id
+          schema:
+            type: string
+            format: uuid
+          examples:
+            200_EDIT_ONE_PIECE_2:
+              value: "3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f"
+            404_UNKNOWN_BOOK:
+              value: "2a3b4c5d-6e7f-4a8b-9c0d-1e2f3a4b5c6d"
+      requestBody:
+        required: true
+        description: The edition as the reader edits it, every field but its ISBN and its cover
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditionDetails"
+            examples:
+              200_EDIT_ONE_PIECE_2:
+                $ref: "#/components/examples/EditOnePiece2"
+              404_UNKNOWN_BOOK:
+                $ref: "#/components/examples/EditOnePiece2"
+      responses:
+        "200":
+          description: The edition as saved, with its copies on the bookshelves the reader belongs to, maybe none
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "400":
+          description: The request is invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: No edition has this id
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /api/v1/series:
     get:
       summary: "The series of the reader's catalogue: each series with an edition on a bookshelf they belong to"
@@ -202,10 +248,10 @@ paths:
                 $ref: "#/components/schemas/Problem"
   /api/v1/series-names:
     get:
-      summary: "The names of the series the house holds, each once"
+      summary: "The names of the series some edition of the house carries, each once"
       responses:
         "200":
-          description: The names of the house's series, in no promised order
+          description: The names of the series some edition carries, in no promised order
           content:
             application/json:
               schema:
@@ -217,10 +263,10 @@ paths:
                   pattern: "\\S"
   /api/v1/author-names:
     get:
-      summary: "The names of the authors the house holds, each once"
+      summary: "The names of the authors some edition of the house carries, each once"
       responses:
         "200":
-          description: The names of the house's authors, in no promised order
+          description: The names of the authors some edition carries, in no promised order
           content:
             application/json:
               schema:
@@ -367,7 +413,7 @@ paths:
                 $ref: "#/components/schemas/Problem"
   /api/v1/bookshelves/{id}/books:
     post:
-      summary: "A copy of this book on this bookshelf; the book is created when its ISBN is unknown"
+      summary: "A copy of this book on this bookshelf; the book is created when its ISBN is unknown, else written with the fields sent"
       parameters:
         - name: id
           in: path
@@ -522,14 +568,21 @@ components:
         defaultBookshelf:
           $ref: "#/components/schemas/Bookshelf"
     Edition:
-      type: object
       description: One published version of a work, the thing an ISBN-13 identifies
-      required: [isbn13, kind, title, subtitle, authors, series, collection, publisher,
+      allOf:
+        - $ref: "#/components/schemas/EditionDetails"
+        - type: object
+          required: [isbn13]
+          properties:
+            isbn13:
+              type: [string, "null"]
+              pattern: "^97[89][0-9]{10}$"
+    EditionDetails:
+      type: object
+      description: What an edition says of itself, but its ISBN-13
+      required: [kind, title, subtitle, authors, series, collection, publisher,
                  publicationYear, language, pageCount, summary]
       properties:
-        isbn13:
-          type: [string, "null"]
-          pattern: "^97[89][0-9]{10}$"
         kind:
           $ref: "#/components/schemas/Kind"
         title:
@@ -890,6 +943,25 @@ components:
         pageCount: 203
         summary: null
         coverSource: inventaire.io
+    EditOnePiece2:
+      value:
+        kind: MANGA
+        title: "Aux prises avec Baggy et ses hommes"
+        subtitle: null
+        authors:
+          - name: "Eiichirō Oda"
+            role: WRITER
+          - name: "Eiichirō Oda"
+            role: ARTIST
+        series:
+          name: "One Piece"
+          volumeNumber: 2
+        collection: "Shonen manga"
+        publisher: "Glénat"
+        publicationYear: 2013
+        language: "fr"
+        pageCount: 208
+        summary: "Luffy et Zoro affrontent le pirate Baggy le clown."
     NewOnePiece1WrongDigit:
       value:
         isbn13: "9782723488526"

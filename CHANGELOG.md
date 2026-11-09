@@ -66,3 +66,6 @@
 
 ## v0.17.0
 - `GET /api/v1/author-names`: the names of the authors the house holds, an array of strings, each once, none blank, in no promised order; verified on its shape, no example. No schema changes; no byte of an existing answer changes.
+
+## v0.18.0
+- `PUT /api/v1/books/{id}`: an edition the house holds, saved with the fields the reader sends, any reader, whether or not a copy sits on their bookshelves; the body an `EditionDetails`, the fields of `Edition` but `isbn13`, with no `coverSource`; `200` the `Book` as saved, with its copies on the reader's bookshelves, maybe none, verified on its shape; `400` the body refused or an id that is not one; `404` when no edition has the id; keyed `200_EDIT_ONE_PIECE_2` on `ONE_PIECE_2_OWNED`'s id and the body `EditOnePiece2`, and `404_UNKNOWN_BOOK`. `Edition` splits: `EditionDetails` holds its fields but `isbn13`, and `Edition` composes over it with `allOf`, adding `isbn13`. `POST /api/v1/bookshelves/{id}/books` now writes the fields sent over an edition the house holds, `coverSource` still ignored then; `GET /api/v1/series-names` and `GET /api/v1/author-names` answer the names some edition carries. No byte of an existing answer changes.
