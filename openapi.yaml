@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Libris API
-  version: 0.18.0
+  version: 0.19.0
 paths:
   /api/v1/me:
     get:
@@ -100,8 +100,14 @@ paths:
                 $ref: "#/components/schemas/Problem"
   /api/v1/books:
     get:
-      summary: "The reader's catalogue: the house's books with a copy on a bookshelf they belong to, fifty at a time, as a shelf reads"
+      summary: "The reader's catalogue: the house's books with a copy on a bookshelf they belong to, fifty at a time, as a shelf reads; with `q`, those its words find"
       parameters:
+        - name: q
+          in: query
+          required: false
+          description: The words of a search; the books they find, or the nearest when they find none; absent, empty or blank, the whole catalogue
+          schema:
+            type: string
         - name: after
           in: query
           required: false
@@ -664,7 +670,7 @@ components:
               description: The source of the cover the card showed, by the name the lookup gave, null when it showed the stand-in; ignored when the house already holds the edition, and a name that is not a source's, the house's own included, is taken as null, the edition then added with no source
     BookPage:
       type: object
-      required: [books, next]
+      required: [books, next, near]
       properties:
         books:
           type: array
@@ -674,6 +680,9 @@ components:
           type: [string, "null"]
           format: uuid
           description: The value of `after` for the next page; null on the last page
+        near:
+          type: boolean
+          description: True when the books are the nearest to words that find none; false otherwise, on an empty page and with no `q`
     Book:
       description: A stored edition, addressed by id
       allOf:
